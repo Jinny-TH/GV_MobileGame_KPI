@@ -49,6 +49,29 @@ function scoreFor(title){
   const score = Math.round((revRank*0.45 + dauRank*0.25 + purRank*0.30) || 50);
   return Math.max(45, Math.min(98, score));
 }
+
+function performanceGrade(score){
+  if(score>=90) return ['Excellent','최상위 런칭 성과'];
+  if(score>=80) return ['Strong','상위권 런칭 성과'];
+  if(score>=70) return ['Good','안정적인 런칭 성과'];
+  if(score>=60) return ['Watch','추가 분석 필요'];
+  return ['Review','성과 원인 점검 필요'];
+}
+function metricRankText(title, period, metric){
+  const arr=rows(period).filter(r=>r[metric]!=null).sort((a,b)=>b[metric]-a[metric]);
+  const idx=arr.findIndex(r=>r.title===title);
+  if(idx<0) return '-';
+  return `${idx+1} / ${arr.length}`;
+}
+function getPrereg(title){ return (D.pre_registration||[]).find(x=>x.title===title) || {}; }
+function insightText(title){
+  const score=scoreFor(title), r30=getKpi(title,'30days'), r1=getKpi(title,'1day');
+  const [grade, desc]=performanceGrade(score);
+  const revRank=metricRankText(title,'30days','revenue_krw');
+  const purRank=metricRankText(title,'30days','pur');
+  const dauRank=metricRankText(title,'1day','dau');
+  return `${title}는 Launch Score ${score}점(${grade})으로 분류됩니다. D+30 Revenue 순위는 ${revRank}, D+1 DAU 순위는 ${dauRank}, D+30 PUR 순위는 ${purRank}입니다. 현재 포탈에서는 이 영역을 사업부 코멘트와 런칭 원인 분석을 누적하는 공간으로 사용합니다.`;
+}
 function rankPercent(period, metric, value){
   if(value==null) return 50;
   const arr=rows(period).filter(r=>r[metric]!=null).map(r=>Number(r[metric])).sort((a,b)=>a-b);
@@ -97,6 +120,9 @@ function setupFilters(){
   const region=document.getElementById('filterRegion'), year=document.getElementById('filterYear');
   if(region && region.options.length===1) region.innerHTML += unique(D.games.map(g=>g.region)).map(x=>`<option>${x}</option>`).join('');
   if(year && year.options.length===1) year.innerHTML += unique(D.games.map(getYear)).map(x=>`<option>${x}</option>`).join('');
+  const lRegion=document.getElementById('libraryRegion'), lYear=document.getElementById('libraryYear');
+  if(lRegion && lRegion.options.length===1) lRegion.innerHTML += unique(D.games.map(g=>g.region)).map(x=>`<option>${x}</option>`).join('');
+  if(lYear && lYear.options.length===1) lYear.innerHTML += unique(D.games.map(getYear)).map(x=>`<option>${x}</option>`).join('');
 }
 function applyDashboardFilter(){
   const q=(document.getElementById('filterGame').value || '').toLowerCase();
@@ -129,8 +155,16 @@ function gameCardHtml(g, metric='revenue_krw'){
 }
 function renderLibrary(){
   const q=(document.getElementById('librarySearch')?.value || '').toLowerCase();
-  const arr=D.games.filter(g=>!q || g.title.toLowerCase().includes(q));
-  document.getElementById('gameLibrary').innerHTML=arr.map(g=>gameCardHtml(g)).join('');
+  const region=document.getElementById('libraryRegion')?.value || '';
+  const year=document.getElementById('libraryYear')?.value || '';
+  const sort=document.getElementById('librarySort')?.value || 'score';
+  let arr=D.games.filter(g=>(!q || g.title.toLowerCase().includes(q)) && (!region || g.region===region) && (!year || getYear(g)===year));
+  arr=arr.sort((a,b)=>{
+    if(sort==='score') return scoreFor(b.title)-scoreFor(a.title);
+    const period=sort==='dau' ? '1day':'30days';
+    return (getKpi(b.title,period)?.[sort]||0) - (getKpi(a.title,period)?.[sort]||0);
+  });
+  document.getElementById('gameLibrary').innerHTML=arr.map(g=>gameCardHtml(g, sort==='score'?'revenue_krw':sort)).join('') || '<div class="empty">검색 결과가 없습니다.</div>';
 }
 function openGame(title){
   const match = D.games.find(g=>g.title===title) || D.games.find(g=>title && g.title.includes(title));
@@ -218,15 +252,18 @@ function renderGameDetail(title){
         <div class="profile-item"><small>Periods</small><b>${(g.periods||[]).join(' · ')}</b></div>
       </div>
     </div>
-    <div class="tabs"><button class="tab ${activeDetailTab==='overview'?'active':''}" onclick="setDetailTab('overview')">Overview</button><button class="tab ${activeDetailTab==='kpi'?'active':''}" onclick="setDetailTab('kpi')">KPI Table</button><button class="tab ${activeDetailTab==='timeline'?'active':''}" onclick="setDetailTab('timeline')">Timeline</button></div>
+    <div class="tabs"><button class="tab ${activeDetailTab==='overview'?'active':''}" onclick="setDetailTab('overview')">Overview</button><button class="tab ${activeDetailTab==='kpi'?'active':''}" onclick="setDetailTab('kpi')">KPI Table</button><button class="tab ${activeDetailTab==='insight'?'active':''}" onclick="setDetailTab('insight')">Insight Notes</button><button class="tab ${activeDetailTab==='timeline'?'active':''}" onclick="setDetailTab('timeline')">Timeline</button></div>
     <div id="detailTabContent"></div>`;
   const content=document.getElementById('detailTabContent');
   if(activeDetailTab==='overview'){
-    content.innerHTML=`<div class="cards cards-v2"><div class="card"><small>D+30 Revenue</small><strong>${fmt(r30.revenue_krw,'revenue_krw')}</strong><em>누적 매출 기준</em></div><div class="card"><small>D+1 DAU</small><strong>${fmt(r1.dau,'dau')}</strong><em>런칭 당일 활동</em></div><div class="card"><small>D+30 PUR</small><strong>${fmt(r30.pur,'pur')}</strong><em>결제 전환율</em></div><div class="card"><small>D+30 ARPPU</small><strong>${fmt(r30.arppu,'arppu')}</strong><em>결제자 객단가</em></div></div><div class="grid two"><section class="panel"><div class="panel-head"><h3>Revenue Growth</h3><span class="caption">D+1~D+60</span></div><div class="line-chart">${lineSvg(revSeries,'revenue_krw')}</div></section><section class="panel"><div class="panel-head"><h3>DAU Growth</h3><span class="caption">D+1~D+60</span></div><div class="line-chart">${lineSvg(dauSeries,'dau')}</div></section></div>`;
+    content.innerHTML=`<div class="cards cards-v2"><div class="card"><small>D+30 Revenue</small><strong>${fmt(r30.revenue_krw,'revenue_krw')}</strong><em>Rank ${metricRankText(g.title,'30days','revenue_krw')}</em></div><div class="card"><small>D+1 DAU</small><strong>${fmt(r1.dau,'dau')}</strong><em>Rank ${metricRankText(g.title,'1day','dau')}</em></div><div class="card"><small>D+30 PUR</small><strong>${fmt(r30.pur,'pur')}</strong><em>Rank ${metricRankText(g.title,'30days','pur')}</em></div><div class="card"><small>Pre-registration</small><strong>${fmt(getPrereg(g.title).total,'dnu')}</strong><em>사전예약 데이터</em></div></div><section class="panel insight-panel"><div><p class="eyebrow">Executive Summary</p><h3>${performanceGrade(score)[1]}</h3><p class="caption">${insightText(g.title)}</p></div></section><div class="grid two"><section class="panel"><div class="panel-head"><h3>Revenue Growth</h3><span class="caption">D+1~D+60</span></div><div class="line-chart">${lineSvg(revSeries,'revenue_krw')}</div></section><section class="panel"><div class="panel-head"><h3>DAU Growth</h3><span class="caption">D+1~D+60</span></div><div class="line-chart">${lineSvg(dauSeries,'dau')}</div></section></div>`;
   } else if(activeDetailTab==='kpi'){
     let html=`<section class="panel"><div class="table-wrap"><table><thead><tr><th>Period</th><th>DNU</th><th>DAU</th><th>Revenue</th><th>PU</th><th>PUR</th><th>ARPU</th><th>ARPPU</th></tr></thead><tbody>`;
     periods.forEach(p=>{ const r=getKpi(g.title,p); html+=`<tr><td>${p}</td><td>${fmt(r.dnu,'dnu')}</td><td>${fmt(r.dau,'dau')}</td><td>${fmt(r.revenue_krw,'revenue_krw')}</td><td>${fmt(r.pu,'pu')}</td><td>${fmt(r.pur,'pur')}</td><td>${fmt(r.arpu,'arpu')}</td><td>${fmt(r.arppu,'arppu')}</td></tr>`; });
     content.innerHTML=html+`</tbody></table></div></section>`;
+  } else if(activeDetailTab==='insight'){
+    const grade=performanceGrade(score);
+    content.innerHTML=`<div class="grid two"><section class="panel"><p class="eyebrow">Business Memo</p><h3>${grade[0]} Launch</h3><p class="caption memo-text">${insightText(g.title)}</p><div class="memo-box"><b>성공/실패 원인 기록</b><p>런칭 당시 UA 규모, 스토어 피처링, 주요 이벤트, 서버 이슈, 경쟁작 상황 등을 이 영역에 누적합니다.</p></div><div class="memo-box"><b>다음 런칭 참고사항</b><p>동일 지역/동일 장르 게임을 비교할 때 재사용할 수 있는 Lesson Learned를 저장합니다.</p></div></section><section class="panel"><p class="eyebrow">Score Breakdown</p><h3>Launch Score ${score}</h3><div class="score-bars"><div><span>Revenue</span><b>${metricRankText(g.title,'30days','revenue_krw')}</b></div><div><span>Initial DAU</span><b>${metricRankText(g.title,'1day','dau')}</b></div><div><span>Pay Rate</span><b>${metricRankText(g.title,'30days','pur')}</b></div><div><span>ARPPU</span><b>${metricRankText(g.title,'30days','arppu')}</b></div></div></section></div>`;
   } else {
     content.innerHTML=`<section class="panel"><h3>Launch Timeline</h3><div class="timeline"><div class="timeline-item"><div class="timeline-date">D-60 ~ D-1</div><div class="timeline-body"><b>Pre-registration / UA Campaign</b><p class="caption">사전예약, 마케팅 집행, 스토어 피처링 정보 저장 영역</p></div></div><div class="timeline-item"><div class="timeline-date">D-Day</div><div class="timeline-body"><b>Official Launch</b><p class="caption">런칭일: ${(g.launch_date||'-').slice(0,10)}</p></div></div><div class="timeline-item"><div class="timeline-date">D+1</div><div class="timeline-body"><b>Initial Response</b><p class="caption">DAU ${fmt(r1.dau,'dau')} / Revenue ${fmt(r1.revenue_krw,'revenue_krw')}</p></div></div><div class="timeline-item"><div class="timeline-date">D+30</div><div class="timeline-body"><b>First Month Benchmark</b><p class="caption">Revenue ${fmt(r30.revenue_krw,'revenue_krw')} / PUR ${fmt(r30.pur,'pur')}</p></div></div></div></section>`;
   }
@@ -240,6 +277,9 @@ function bind(){
   document.getElementById('rankPeriod').onchange=renderRankTable;
   document.getElementById('rankMetric').onchange=renderRankTable;
   document.getElementById('librarySearch')?.addEventListener('input', renderLibrary);
+  document.getElementById('libraryRegion')?.addEventListener('change', renderLibrary);
+  document.getElementById('libraryYear')?.addEventListener('change', renderLibrary);
+  document.getElementById('librarySort')?.addEventListener('change', renderLibrary);
   document.getElementById('searchInput').oninput=e=>{
     const q=e.target.value.trim().toLowerCase();
     if(!q) return;

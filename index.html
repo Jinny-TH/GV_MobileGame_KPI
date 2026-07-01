@@ -3,248 +3,69 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Launch KPI Portal v1.2.2</title>
+  <title>GGT Launch KPI Portal v2.0</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="logo">L</div>
-        <div>
-          <strong>Launch KPI</strong>
-          <span>Intelligence Portal</span>
-        </div>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="mark">G</div><div><b>GGT Launch KPI</b><span>Official v2.0</span></div></div>
+    <button class="nav active" data-view="dashboard">🏠 Dashboard</button>
+    <button class="nav" data-view="library">🎮 Game Library</button>
+    <button class="nav" data-view="detail">📘 Game Detail</button>
+    <button class="nav" data-view="compare">📊 Comparison</button>
+    <button class="nav" data-view="ranking">🏆 Ranking</button>
+    <button class="nav" data-view="retention">❤️ Retention</button>
+    <button class="nav" data-view="admin">⚙️ Admin</button>
+    <div class="sidebar-note"><b>Currency Standard</b><p>모든 금액 지표는 USD 기준으로 표시합니다.</p></div>
+  </aside>
+  <main>
+    <header class="topbar">
+      <div><p class="eyebrow">Launch Intelligence Portal</p><h1>모바일게임 런칭 성과 비교 포탈</h1><p>과거 서비스 게임의 D+1 · D+10 · D+15 · D+30 · D+60 성과를 같은 기준으로 비교합니다.</p></div>
+      <div class="global-search"><input id="globalSearch" placeholder="게임 검색" /></div>
+    </header>
+
+    <section id="dashboard" class="view active">
+      <div class="hero"><div><p class="eyebrow">Executive View</p><h2>GGT 사업부가 함께 보는 런칭 데이터 자산</h2><p>Revenue, Retention, UA, Pre-registration, Lessons Learned를 한 곳에서 관리합니다.</p></div><div class="hero-actions"><button onclick="showView('library')">게임 찾기</button><button class="secondary" onclick="showView('compare')">비교 시작</button></div></div>
+      <div class="notice">💵 <b>USD 기준:</b> Dashboard / Ranking / Comparison의 금액은 모두 USD로 정규화했습니다. <span id="currencyNote"></span></div>
+      <div id="summaryCards" class="cards"></div>
+      <div class="grid two">
+        <section class="panel"><div class="panel-head"><div><p class="eyebrow">D+30 Benchmark</p><h3>Top Revenue Ranking</h3></div><select id="dashMetric"><option value="revenue_usd">Revenue USD</option><option value="dau">DAU</option><option value="pur">PUR</option><option value="arppu_usd">ARPPU USD</option></select></div><div id="dashBars" class="bars"></div></section>
+        <section class="panel"><div class="panel-head"><div><p class="eyebrow">Quick Compare</p><h3>빠른 비교</h3></div><span>최대 5개</span></div><div id="quickCompare" class="pills"></div><button class="full" onclick="goCompare()">선택 게임 비교</button></section>
       </div>
-      <nav>
-        <button class="nav active" data-view="dashboard">🏠 Dashboard</button>
-        <button class="nav" data-view="library">🎮 Game Library</button>
-        <button class="nav" data-view="compare">📊 Game Comparison</button>
-        <button class="nav" data-view="ranking">🏆 Ranking</button>
-        <button class="nav" data-view="prereg">🚀 Pre-registration</button>
-        <button class="nav" data-view="admin">⚙️ Admin Design</button>
-      </nav>
-      <div class="note">
-        <b>목적</b>
-        <p>실시간 운영 현황이 아니라, 과거 게임의 초기 런칭 성과를 같은 기준으로 비교합니다.</p>
-      </div>
-    </aside>
+      <section class="panel"><div class="panel-head"><div><p class="eyebrow">Recently / Library</p><h3>게임 카드</h3></div><button class="link" onclick="showView('library')">전체 보기 →</button></div><div id="homeGames" class="game-grid"></div></section>
+    </section>
 
-    <main>
-      <header class="topbar">
-        <div>
-          <h1>Mobile Game Launch KPI Portal</h1>
-          <p>1day · 10days · 15days · 30days · 60days 기준 런칭 성과 비교</p>
-        </div>
-        <div class="searchbox">
-          <input id="searchInput" placeholder="게임 검색: ROX, ROO, ROM..." />
-        </div>
-      </header>
+    <section id="library" class="view">
+      <div class="section-title"><div><p class="eyebrow">Game Library</p><h2>게임 라이브러리</h2></div><div class="filters"><input id="libSearch" placeholder="검색"/><select id="libRegion"><option value="">ALL Region</option></select><select id="libYear"><option value="">ALL Year</option></select><select id="libSort"><option value="score">Launch Score</option><option value="revenue_usd">D+30 Revenue</option><option value="dau">D+1 DAU</option><option value="pur">D+30 PUR</option></select></div></div>
+      <div id="libraryGrid" class="game-grid"></div>
+    </section>
 
-      <section id="dashboard" class="view active">
-        <div class="hero hero-v2">
-          <div>
-            <p class="eyebrow">Launch Knowledge Base</p>
-            <h2>과거 런칭 성과를 검색하고, 비교하고, 기억하는 포탈</h2>
-            <p>실시간 운영 현황이 아니라, 서비스했던 게임의 초기 런칭 성과를 같은 기준으로 비교합니다.</p>
-          </div>
-          <div class="hero-actions">
-            <button class="primary" onclick="switchView('library')">게임 찾기</button>
-            <button class="ghost" onclick="switchView('compare')">비교 시작</button>
-          </div>
-        </div>
+    <section id="detail" class="view"><div id="detailBody"></div></section>
 
-        <section class="panel search-panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Smart Search</p>
-              <h3>게임 검색 / 필터</h3>
-            </div>
-            <span class="caption">게임명, 지역, 출시연도 기준</span>
-          </div>
-          <div class="search-grid">
-            <label>Game<input id="filterGame" placeholder="ROX, ROO, ROM..." /></label>
-            <label>Region<select id="filterRegion"><option value="">ALL</option></select></label>
-            <label>Launch Year<select id="filterYear"><option value="">ALL</option></select></label>
-            <label>Metric<select id="filterMetric"><option value="revenue_krw">Revenue</option><option value="dau">DAU</option><option value="pur">PUR</option><option value="arppu">ARPPU</option></select></label>
-            <button class="primary" onclick="applyDashboardFilter()">Search</button>
-          </div>
-        </section>
+    <section id="compare" class="view">
+      <div class="section-title"><div><p class="eyebrow">Core Feature</p><h2>Game Comparison</h2></div><select id="compareMetric"><option value="revenue_usd">Revenue USD</option><option value="dau">DAU</option><option value="dnu">DNU</option><option value="pu">PU</option><option value="pur">PUR</option><option value="arpu_usd">ARPU USD</option><option value="arppu_usd">ARPPU USD</option></select></div>
+      <section class="panel"><div id="comparePick" class="pills"></div><div id="lineChart" class="line-chart"></div><div class="table-wrap"><table id="compareTable"></table></div></section>
+    </section>
 
-        <div class="cards cards-v2" id="summaryCards"></div>
+    <section id="ranking" class="view">
+      <div class="section-title"><div><p class="eyebrow">Ranking</p><h2>런칭 성과 랭킹</h2></div><div class="filters"><select id="rankPeriod"><option>1day</option><option>10days</option><option>15days</option><option selected>30days</option><option>60days</option></select><select id="rankMetric"><option value="revenue_usd">Revenue USD</option><option value="dau">DAU</option><option value="dnu">DNU</option><option value="pu">PU</option><option value="pur">PUR</option><option value="arpu_usd">ARPU USD</option><option value="arppu_usd">ARPPU USD</option></select></div></div>
+      <section class="panel"><div class="table-wrap"><table id="rankTable"></table></div></section>
+    </section>
 
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">D+30 Benchmark</p>
-                <h3>D+30 Ranking</h3>
-              </div>
-              <select id="metricSelect">
-                <option value="revenue_krw">Revenue</option>
-                <option value="dau">DAU</option>
-                <option value="dnu">DNU</option>
-                <option value="pu">PU</option>
-                <option value="pur">PUR</option>
-                <option value="arppu">ARPPU</option>
-              </select>
-            </div>
-            <div id="rankingBars" class="bars bars-ranked"></div>
-          </section>
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">Quick Compare</p>
-                <h3>바로 비교하기</h3>
-              </div>
-              <span class="caption">최대 5개 선택</span>
-            </div>
-            <div id="quickGameList" class="game-list"></div>
-            <button class="primary full" onclick="goCompareSelected()">Compare</button>
-          </section>
-        </div>
+    <section id="retention" class="view">
+      <div class="section-title"><div><p class="eyebrow">Retention</p><h2>Retention Dashboard</h2></div></div>
+      <div class="notice">현재 업로드된 파일의 <b>1M Retention</b> 시트에는 D1/D3/D7/D14 헤더는 있으나 실제 값은 비어 있습니다. 정식 운영 전 리텐션 데이터 매핑을 추가해야 합니다.</div>
+      <section class="panel"><div class="table-wrap"><table id="retentionTable"></table></div></section>
+    </section>
 
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Filtered Result</p>
-              <h3>검색 결과</h3>
-            </div>
-            <span class="caption" id="filterCount">전체 게임</span>
-          </div>
-          <div id="dashboardGameCards" class="game-card-grid compact"></div>
-        </section>
-      </section>
-
-      <section id="library" class="view">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">Game Library</p>
-            <h2>게임 라이브러리</h2>
-          </div>
-          <div class="filters library-filters">
-            <input id="librarySearch" placeholder="게임 검색" />
-            <select id="libraryRegion"><option value="">ALL Region</option></select>
-            <select id="libraryYear"><option value="">ALL Year</option></select>
-            <select id="librarySort">
-              <option value="score">Launch Score</option>
-              <option value="revenue_krw">D+30 Revenue</option>
-              <option value="dau">D+1 DAU</option>
-              <option value="pur">D+30 PUR</option>
-            </select>
-          </div>
-        </div>
-        <div id="gameLibrary" class="game-card-grid"></div>
-      </section>
-
-      <section id="detail" class="view">
-        <div id="gameDetail"></div>
-      </section>
-
-      <section id="compare" class="view">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">Core Feature</p>
-            <h2>Game Comparison</h2>
-          </div>
-          <div class="filters">
-            <select id="compareMetric">
-              <option value="revenue_krw">Revenue</option>
-              <option value="dau">DAU</option>
-              <option value="dnu">DNU</option>
-              <option value="pu">PU</option>
-              <option value="pur">PUR</option>
-              <option value="arpu">ARPU</option>
-              <option value="arppu">ARPPU</option>
-            </select>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="game-pills" id="compareGameList"></div>
-          <div id="lineChart" class="line-chart"></div>
-          <div class="table-wrap">
-            <table id="compareTable"></table>
-          </div>
-        </div>
-      </section>
-
-      <section id="ranking" class="view">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">Ranking</p>
-            <h2>런칭 성과 랭킹</h2>
-          </div>
-          <div class="filters">
-            <select id="rankPeriod">
-              <option>1day</option><option>10days</option><option>15days</option><option selected>30days</option><option>60days</option>
-            </select>
-            <select id="rankMetric">
-              <option value="revenue_krw">Revenue</option>
-              <option value="dau">DAU</option>
-              <option value="dnu">DNU</option>
-              <option value="pu">PU</option>
-              <option value="pur">PUR</option>
-              <option value="arpu">ARPU</option>
-              <option value="arppu">ARPPU</option>
-            </select>
-          </div>
-        </div>
-        <section class="panel">
-          <div class="table-wrap"><table id="rankTable"></table></div>
-        </section>
-      </section>
-
-      <section id="prereg" class="view">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">Pre-registration</p>
-            <h2>사전예약 성과 비교</h2>
-          </div>
-        </div>
-        <div class="grid two">
-          <section class="panel">
-            <h3>Pre-registration Ranking</h3>
-            <div id="preregBars" class="bars"></div>
-          </section>
-          <section class="panel">
-            <h3>GGT Pre-regist Detail</h3>
-            <div class="table-wrap"><table id="preregTable"></table></div>
-          </section>
-        </div>
-      </section>
-
-      <section id="admin" class="view">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">Admin / Upload</p>
-            <h2>관리자 화면 설계</h2>
-          </div>
-        </div>
-        <div class="grid two">
-          <section class="panel">
-            <h3>엑셀 업로드 Flow</h3>
-            <ol class="flow">
-              <li>런칭 KPI 엑셀 업로드</li>
-              <li>시트 자동 인식: ALL KPI 비교 / 사전예약 / UA</li>
-              <li>게임명·기간·KPI 컬럼 표준화</li>
-              <li>미리보기 및 누락 KPI 확인</li>
-              <li>DB 저장 후 포탈 반영</li>
-            </ol>
-          </section>
-          <section class="panel">
-            <h3>표준 데이터 모델</h3>
-            <pre><code>games
-launch_kpi
-pre_registration
-ua_performance
-country_kpi
-launch_events</code></pre>
-          </section>
-        </div>
-      </section>
-    </main>
-  </div>
-  <script src="./data.js"></script>
-  <script src="./app.js"></script>
+    <section id="admin" class="view">
+      <div class="section-title"><div><p class="eyebrow">Admin</p><h2>관리자 설계</h2></div></div>
+      <div class="grid two"><section class="panel"><h3>Excel Upload Pipeline</h3><ol><li>엑셀 업로드</li><li>게임명 / 기간 / KPI 자동 매핑</li><li>모든 금액 USD 변환</li><li>리텐션/UA/사전예약 데이터 검증</li><li>DB 저장 후 Dashboard 반영</li></ol></section><section class="panel"><h3>Data Rules</h3><ul><li>Revenue / ARPU / ARPPU / UA Cost / CPI = USD</li><li>Retention = %</li><li>Period = 1day, 10days, 15days, 30days, 60days</li><li>Retention 값이 없으면 “Data Required”로 표시</li></ul></section></div>
+    </section>
+  </main>
+</div>
+<script src="./data.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>

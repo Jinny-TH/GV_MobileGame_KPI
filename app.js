@@ -1,290 +1,39 @@
-const D = window.PORTAL_DATA;
-let selectedGames = D.games.slice(0,4).map(g=>g.title);
-let currentDetailGame = D.games[0]?.title;
-let activeDetailTab = 'overview';
-let dashboardFiltered = D.games;
-
-const KRW = v => {
-  if(v==null || isNaN(v)) return '-';
-  const n = Number(v);
-  if(Math.abs(n)>=1e9) return (n/1e9).toFixed(1)+'B';
-  if(Math.abs(n)>=1e6) return (n/1e6).toFixed(1)+'M';
-  if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'K';
-  return n.toLocaleString();
-};
-const fmt = (v, metric) => {
-  if(v==null || isNaN(v)) return '-';
-  if(metric==='pur' || String(metric).includes('share') || String(metric).includes('ratio')) return (Number(v)*100).toFixed(1)+'%';
-  if(String(metric).includes('revenue') || metric==='arpu' || metric==='arppu') return KRW(v);
-  return Math.round(Number(v)).toLocaleString();
-};
-const metricLabel = { revenue_krw:'Revenue', dau:'DAU', dnu:'DNU', pu:'PU', pur:'PUR', arpu:'ARPU', arppu:'ARPPU' };
-const periods = D.period_order || ['1day','10days','15days','30days','60days'];
-
-function switchView(id){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active', n.dataset.view===id));
-  if(id==='dashboard') renderDashboardCards();
-  if(id==='library') renderLibrary();
-  if(id==='detail') renderGameDetail(currentDetailGame);
-  if(id==='compare') renderCompare();
-  if(id==='ranking') renderRankTable();
-  if(id==='prereg') renderPrereg();
-  window.scrollTo({top:0, behavior:'smooth'});
+const D=window.PORTAL_DATA;
+const periods=D.period_order||['1day','10days','15days','30days','60days'];
+let selected=D.games.slice(0,4).map(g=>g.title.trim());
+let current=(D.games[0]?.title||'').trim();
+const $=id=>document.getElementById(id);
+const row=(title,period)=>D.kpi.find(r=>r.title.trim()===title.trim()&&r.period===period);
+const rows=period=>D.kpi.filter(r=>r.period===period);
+const gameRows=title=>D.kpi.filter(r=>r.title.trim()===title.trim()).sort((a,b)=>periods.indexOf(a.period)-periods.indexOf(b.period));
+function money(v){if(v==null||isNaN(v))return'-';v=Number(v);if(Math.abs(v)>=1e6)return'$'+(v/1e6).toFixed(2)+'M';if(Math.abs(v)>=1e3)return'$'+(v/1e3).toFixed(1)+'K';return'$'+v.toLocaleString(undefined,{maximumFractionDigits:0});}
+function num(v){if(v==null||isNaN(v))return'-';v=Number(v);if(Math.abs(v)>=1e6)return(v/1e6).toFixed(1)+'M';if(Math.abs(v)>=1e3)return(v/1e3).toFixed(1)+'K';return Math.round(v).toLocaleString();}
+function pct(v){if(v==null||isNaN(v))return'-';return (Number(v)*100).toFixed(1)+'%'}
+function fmt(v,m){if(m.includes('usd')||m==='revenue_usd')return money(v);if(m==='pur'||m.includes('share')||m.includes('ratio'))return pct(v);return num(v)}
+const labels={revenue_usd:'Revenue',dau:'DAU',dnu:'DNU',pu:'PU',pur:'PUR',arpu_usd:'ARPU',arppu_usd:'ARPPU'};
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===id));if(id==='dashboard')renderDashboard();if(id==='library')renderLibrary();if(id==='detail')renderDetail(current);if(id==='compare')renderCompare();if(id==='ranking')renderRanking();if(id==='retention')renderRetention();scrollTo(0,0)}
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+function launchYear(g){return g.launch_date?String(new Date(g.launch_date).getFullYear()):'Unknown'}
+function region(g){return g.region||'Global'}
+function d30(title){return row(title,'30days')||gameRows(title).at(-1)||{}}
+function d1(title){return row(title,'1day')||gameRows(title)[0]||{}}
+function renderDashboard(){
+ $('currencyNote').textContent=`프로토타입 환산 기준: 1 USD = ${D.currency_standard.prototype_usd_rate.toLocaleString()} KRW`;
+ const games=D.games, years=games.map(launchYear).filter(y=>y!=='Unknown');
+ const topRev=[...games].sort((a,b)=>(d30(b.title).revenue_usd||0)-(d30(a.title).revenue_usd||0))[0];
+ const topDau=[...games].sort((a,b)=>(d1(b.title).dau||0)-(d1(a.title).dau||0))[0];
+ $('summaryCards').innerHTML=[['Games',games.length,'비교 가능한 게임'],['Regions',new Set(games.map(g=>region(g))).size,'서비스 지역'],['Top D+30 Revenue',topRev?topRev.title:'-',topRev?money(d30(topRev.title).revenue_usd):''],['Top D+1 DAU',topDau?topDau.title:'-',topDau?num(d1(topDau.title).dau):'']].map(c=>`<div class="card"><span>${c[0]}</span><strong>${c[1]}</strong><small>${c[2]||''}</small></div>`).join('');
+ renderBars('dashBars',rows('30days'),$('dashMetric').value);renderPills('quickCompare',D.games.map(g=>g.title),selected,true);$('homeGames').innerHTML=D.games.slice(0,6).map(gameCard).join('')
 }
-document.querySelectorAll('.nav').forEach(btn=>btn.onclick=()=>switchView(btn.dataset.view));
-
-function rows(period){ return D.kpi.filter(r=>r.period===period); }
-function gameRows(title){ return D.kpi.filter(r=>r.title===title).sort((a,b)=>periods.indexOf(a.period)-periods.indexOf(b.period)); }
-function topRow(period, metric){ return rows(period).filter(r=>r[metric]!=null).sort((a,b)=>b[metric]-a[metric])[0]; }
-function getKpi(title, period='30days'){ return D.kpi.find(r=>r.title===title && r.period===period) || D.kpi.find(r=>r.title===title) || {}; }
-function getYear(g){ return g.launch_date ? String(new Date(g.launch_date).getFullYear()) : ''; }
-function unique(arr){ return [...new Set(arr.filter(Boolean))].sort(); }
-function scoreFor(title){
-  const r30=getKpi(title,'30days'), r1=getKpi(title,'1day');
-  const revRank = rankPercent('30days','revenue_krw', r30.revenue_krw);
-  const dauRank = rankPercent('1day','dau', r1.dau);
-  const purRank = rankPercent('30days','pur', r30.pur);
-  const score = Math.round((revRank*0.45 + dauRank*0.25 + purRank*0.30) || 50);
-  return Math.max(45, Math.min(98, score));
-}
-
-function performanceGrade(score){
-  if(score>=90) return ['Excellent','최상위 런칭 성과'];
-  if(score>=80) return ['Strong','상위권 런칭 성과'];
-  if(score>=70) return ['Good','안정적인 런칭 성과'];
-  if(score>=60) return ['Watch','추가 분석 필요'];
-  return ['Review','성과 원인 점검 필요'];
-}
-function metricRankText(title, period, metric){
-  const arr=rows(period).filter(r=>r[metric]!=null).sort((a,b)=>b[metric]-a[metric]);
-  const idx=arr.findIndex(r=>r.title===title);
-  if(idx<0) return '-';
-  return `${idx+1} / ${arr.length}`;
-}
-function getPrereg(title){ return (D.pre_registration||[]).find(x=>x.title===title) || {}; }
-function insightText(title){
-  const score=scoreFor(title), r30=getKpi(title,'30days'), r1=getKpi(title,'1day');
-  const [grade, desc]=performanceGrade(score);
-  const revRank=metricRankText(title,'30days','revenue_krw');
-  const purRank=metricRankText(title,'30days','pur');
-  const dauRank=metricRankText(title,'1day','dau');
-  return `${title}는 Launch Score ${score}점(${grade})으로 분류됩니다. D+30 Revenue 순위는 ${revRank}, D+1 DAU 순위는 ${dauRank}, D+30 PUR 순위는 ${purRank}입니다. 현재 포탈에서는 이 영역을 사업부 코멘트와 런칭 원인 분석을 누적하는 공간으로 사용합니다.`;
-}
-function rankPercent(period, metric, value){
-  if(value==null) return 50;
-  const arr=rows(period).filter(r=>r[metric]!=null).map(r=>Number(r[metric])).sort((a,b)=>a-b);
-  const idx=arr.findIndex(v=>v>=value);
-  return Math.round(((idx+1)/arr.length)*100);
-}
-
-function renderSummary(){
-  const games = D.games.length;
-  const regions = unique(D.games.map(g=>g.region)).length;
-  const years = unique(D.games.map(getYear));
-  const topRev = topRow('30days','revenue_krw');
-  const cards = [
-    ['Games', games, '비교 가능한 런칭 게임', '+ Library'],
-    ['Regions', regions, '서비스 지역 기준', '+ Filter'],
-    ['Launch Years', years.length ? `${years[0]}~${years[years.length-1]}` : '-', '런칭 히스토리 범위', '+ History'],
-    ['Top D+30 Revenue', topRev?.title || '-', fmt(topRev?.revenue_krw,'revenue_krw'), '+ Benchmark'],
-  ];
-  document.getElementById('summaryCards').innerHTML = cards.map(c=>`
-    <div class="card"><small>${c[0]}</small><strong>${c[1]}</strong><em>${c[2]}</em><span class="delta">${c[3]}</span></div>
-  `).join('');
-}
-function renderBars(containerId, data, metric, limit=10){
-  const arr = data.filter(r=>r[metric]!=null).sort((a,b)=>b[metric]-a[metric]).slice(0,limit);
-  const max = Math.max(...arr.map(r=>Number(r[metric]||0)),1);
-  document.getElementById(containerId).innerHTML = arr.map((r,i)=>`
-    <div class="bar-row" onclick="openGame('${(r.title || r.game || '').replace(/'/g,"\\'")}')">
-      <span class="bar-rank">${i+1}</span>
-      <b>${r.title || r.game}<div class="bar-sub">${r.region || ''}</div></b>
-      <div class="bar-bg"><div class="bar-fill" style="width:${Math.max(2,(Number(r[metric]||0)/max)*100)}%"></div></div>
-      <span class="value">${fmt(r[metric],metric)}</span>
-    </div>
-  `).join('');
-}
-function renderQuickGames(){
-  const el = document.getElementById('quickGameList');
-  el.innerHTML = D.games.map(g=>`<button class="game-check ${selectedGames.includes(g.title)?'selected':''}" data-game="${g.title}">${g.title}</button>`).join('');
-  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{
-    const g=b.dataset.game;
-    if(selectedGames.includes(g)) selectedGames = selectedGames.filter(x=>x!==g);
-    else if(selectedGames.length<5) selectedGames.push(g);
-    renderQuickGames(); renderCompareList();
-  });
-}
-function setupFilters(){
-  const region=document.getElementById('filterRegion'), year=document.getElementById('filterYear');
-  if(region && region.options.length===1) region.innerHTML += unique(D.games.map(g=>g.region)).map(x=>`<option>${x}</option>`).join('');
-  if(year && year.options.length===1) year.innerHTML += unique(D.games.map(getYear)).map(x=>`<option>${x}</option>`).join('');
-  const lRegion=document.getElementById('libraryRegion'), lYear=document.getElementById('libraryYear');
-  if(lRegion && lRegion.options.length===1) lRegion.innerHTML += unique(D.games.map(g=>g.region)).map(x=>`<option>${x}</option>`).join('');
-  if(lYear && lYear.options.length===1) lYear.innerHTML += unique(D.games.map(getYear)).map(x=>`<option>${x}</option>`).join('');
-}
-function applyDashboardFilter(){
-  const q=(document.getElementById('filterGame').value || '').toLowerCase();
-  const region=document.getElementById('filterRegion').value;
-  const year=document.getElementById('filterYear').value;
-  dashboardFiltered = D.games.filter(g=>(!q || g.title.toLowerCase().includes(q)) && (!region || g.region===region) && (!year || getYear(g)===year));
-  renderDashboardCards();
-}
-function renderDashboardCards(){
-  const metric=document.getElementById('filterMetric')?.value || 'revenue_krw';
-  const el=document.getElementById('dashboardGameCards');
-  if(!el) return;
-  document.getElementById('filterCount').textContent = `${dashboardFiltered.length} games`;
-  el.innerHTML = dashboardFiltered.slice(0,9).map(g=>gameCardHtml(g, metric)).join('') || '<div class="empty">검색 결과가 없습니다.</div>';
-}
-function gameCardHtml(g, metric='revenue_krw'){
-  const r30=getKpi(g.title,'30days'), r1=getKpi(g.title,'1day');
-  const score=scoreFor(g.title);
-  return `<article class="game-card" onclick="openGame('${g.title.replace(/'/g,"\\'")}')">
-    <h4>${g.title}</h4>
-    <div class="game-meta"><span class="tag">${g.region || 'Global'}</span><span class="tag green">${getYear(g) || 'No Date'}</span><span class="tag gray">${(g.periods||[]).length} periods</span></div>
-    <div class="mini-kpi">
-      <div><small>D+30 Rev</small><b>${fmt(r30.revenue_krw,'revenue_krw')}</b></div>
-      <div><small>D+1 DAU</small><b>${fmt(r1.dau,'dau')}</b></div>
-      <div><small>D+30 PUR</small><b>${fmt(r30.pur,'pur')}</b></div>
-      <div><small>D+30 ARPPU</small><b>${fmt(r30.arppu,'arppu')}</b></div>
-    </div>
-    <div class="game-score"><span class="caption">Launch Score</span><div class="score-circle" style="--score:${score}%"><span>${score}</span></div></div>
-  </article>`;
-}
-function renderLibrary(){
-  const q=(document.getElementById('librarySearch')?.value || '').toLowerCase();
-  const region=document.getElementById('libraryRegion')?.value || '';
-  const year=document.getElementById('libraryYear')?.value || '';
-  const sort=document.getElementById('librarySort')?.value || 'score';
-  let arr=D.games.filter(g=>(!q || g.title.toLowerCase().includes(q)) && (!region || g.region===region) && (!year || getYear(g)===year));
-  arr=arr.sort((a,b)=>{
-    if(sort==='score') return scoreFor(b.title)-scoreFor(a.title);
-    const period=sort==='dau' ? '1day':'30days';
-    return (getKpi(b.title,period)?.[sort]||0) - (getKpi(a.title,period)?.[sort]||0);
-  });
-  document.getElementById('gameLibrary').innerHTML=arr.map(g=>gameCardHtml(g, sort==='score'?'revenue_krw':sort)).join('') || '<div class="empty">검색 결과가 없습니다.</div>';
-}
-function openGame(title){
-  const match = D.games.find(g=>g.title===title) || D.games.find(g=>title && g.title.includes(title));
-  if(!match) return;
-  currentDetailGame = match.title;
-  switchView('detail');
-}
-
-function goCompareSelected(){ switchView('compare'); renderCompare(); }
-function renderCompareList(){
-  const el = document.getElementById('compareGameList');
-  el.innerHTML = D.games.map(g=>`<button class="pill ${selectedGames.includes(g.title)?'selected':''}" data-game="${g.title}">${g.title}</button>`).join('');
-  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{
-    const g=b.dataset.game;
-    if(selectedGames.includes(g)) selectedGames = selectedGames.filter(x=>x!==g);
-    else if(selectedGames.length<5) selectedGames.push(g);
-    renderCompareList(); renderCompare();
-  });
-}
-function renderLineChart(){
-  const metric = document.getElementById('compareMetric').value;
-  const series = selectedGames.map(g=>({game:g, values:periods.map(p=>getKpi(g,p)?.[metric] ?? null)}));
-  document.getElementById('lineChart').innerHTML = lineSvg(series, metric, 900, 320);
-}
-function lineSvg(series, metric='revenue_krw', w=900, h=320){
-  const vals = series.flatMap(s=>s.values).filter(v=>v!=null);
-  const max = Math.max(...vals,1), min = Math.min(...vals,0);
-  const pad=44, colors=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'];
-  const x=i=>pad+i*(w-pad*2)/(periods.length-1);
-  const y=v=>h-pad-((v-min)/(max-min||1))*(h-pad*2);
-  let svg = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">`;
-  for(let i=0;i<5;i++){ const yy=pad+i*(h-pad*2)/4; svg+=`<line x1="${pad}" y1="${yy}" x2="${w-pad}" y2="${yy}" stroke="#e5e7eb"/>`; }
-  periods.forEach((p,i)=>{ svg+=`<text x="${x(i)}" y="${h-12}" text-anchor="middle" font-size="13" fill="#6b7280">${p}</text>`; });
-  series.forEach((s,idx)=>{
-    const pts=s.values.map((v,i)=>v==null?null:[x(i),y(v)]).filter(Boolean);
-    if(pts.length>1) svg += `<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${colors[idx%colors.length]}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
-    pts.forEach(p=> svg+=`<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="${colors[idx%colors.length]}"/>`);
-    svg += `<text x="${pad+idx*155}" y="20" font-size="13" font-weight="700" fill="${colors[idx%colors.length]}">${s.game}</text>`;
-  });
-  return svg+'</svg>';
-}
-function renderCompareTable(){
-  const metric = document.getElementById('compareMetric').value;
-  let html = `<thead><tr><th>Game</th>${periods.map(p=>`<th>${p} ${metricLabel[metric]}</th>`).join('')}</tr></thead><tbody>`;
-  selectedGames.forEach(g=>{
-    html += `<tr onclick="openGame('${g.replace(/'/g,"\\'")}')"><td>${g}</td>` + periods.map(p=>`<td>${fmt(getKpi(g,p)?.[metric],metric)}</td>`).join('') + `</tr>`;
-  });
-  html += `</tbody>`;
-  document.getElementById('compareTable').innerHTML = html;
-}
-function renderCompare(){ renderCompareList(); renderLineChart(); renderCompareTable(); }
-function renderRankTable(){
-  const period=document.getElementById('rankPeriod').value, metric=document.getElementById('rankMetric').value;
-  const arr=rows(period).filter(r=>r[metric]!=null).sort((a,b)=>b[metric]-a[metric]);
-  let html=`<thead><tr><th>Rank</th><th>Game</th><th>Launch Date</th><th>${period} ${metricLabel[metric]}</th><th>DAU</th><th>Revenue</th><th>PUR</th><th>ARPPU</th></tr></thead><tbody>`;
-  arr.forEach((r,i)=>html+=`<tr onclick="openGame('${r.title.replace(/'/g,"\\'")}')"><td>${i+1}</td><td>${r.title}</td><td>${(r.launch_date||'').slice(0,10)}</td><td>${fmt(r[metric],metric)}</td><td>${fmt(r.dau,'dau')}</td><td>${fmt(r.revenue_krw,'revenue_krw')}</td><td>${fmt(r.pur,'pur')}</td><td>${fmt(r.arppu,'arppu')}</td></tr>`);
-  document.getElementById('rankTable').innerHTML=html+`</tbody>`;
-}
-function renderPrereg(){
-  renderBars('preregBars', D.pre_registration.map(x=>({...x, title:x.title, total:x.total})), 'total', 10);
-  const arr=D.pre_registration_ggt.filter(x=>x.total);
-  let html=`<thead><tr><th>Game</th><th>Region</th><th>Period</th><th>Total</th><th>D+1 DAU</th><th>DAU / Pre-reg</th></tr></thead><tbody>`;
-  arr.forEach(r=>html+=`<tr><td>${r.game}</td><td>${r.region||'-'}</td><td>${r.period||'-'}</td><td>${fmt(r.total,'dnu')}</td><td>${fmt(r.dau_1day,'dau')}</td><td>${fmt(r.dau_pre_ratio,'pur')}</td></tr>`);
-  document.getElementById('preregTable').innerHTML=html+`</tbody>`;
-}
-
-function renderGameDetail(title){
-  const g=D.games.find(x=>x.title===title) || D.games[0];
-  if(!g) return;
-  currentDetailGame=g.title;
-  const r30=getKpi(g.title,'30days'), r1=getKpi(g.title,'1day'), score=scoreFor(g.title);
-  const revSeries=[{game:g.title, values:periods.map(p=>getKpi(g.title,p)?.revenue_krw ?? null)}];
-  const dauSeries=[{game:g.title, values:periods.map(p=>getKpi(g.title,p)?.dau ?? null)}];
-  document.getElementById('gameDetail').innerHTML=`
-    <div class="detail-hero">
-      <div class="detail-top">
-        <div class="detail-title"><p class="eyebrow">Game Profile</p><h2>${g.title}</h2><p class="caption">${g.region || 'Global'} 런칭 성과 상세</p></div>
-        <div class="score-box"><span>Launch Score</span><strong>${score}</strong><span>Revenue · DAU · PUR 기준</span></div>
-      </div>
-      <div class="profile-grid">
-        <div class="profile-item"><small>Launch Date</small><b>${(g.launch_date||'-').slice(0,10)}</b></div>
-        <div class="profile-item"><small>Region</small><b>${g.region || '-'}</b></div>
-        <div class="profile-item"><small>Genre</small><b>MMORPG / Ragnarok IP</b></div>
-        <div class="profile-item"><small>Publisher</small><b>GGT / Gravity</b></div>
-        <div class="profile-item"><small>Periods</small><b>${(g.periods||[]).join(' · ')}</b></div>
-      </div>
-    </div>
-    <div class="tabs"><button class="tab ${activeDetailTab==='overview'?'active':''}" onclick="setDetailTab('overview')">Overview</button><button class="tab ${activeDetailTab==='kpi'?'active':''}" onclick="setDetailTab('kpi')">KPI Table</button><button class="tab ${activeDetailTab==='insight'?'active':''}" onclick="setDetailTab('insight')">Insight Notes</button><button class="tab ${activeDetailTab==='timeline'?'active':''}" onclick="setDetailTab('timeline')">Timeline</button></div>
-    <div id="detailTabContent"></div>`;
-  const content=document.getElementById('detailTabContent');
-  if(activeDetailTab==='overview'){
-    content.innerHTML=`<div class="cards cards-v2"><div class="card"><small>D+30 Revenue</small><strong>${fmt(r30.revenue_krw,'revenue_krw')}</strong><em>Rank ${metricRankText(g.title,'30days','revenue_krw')}</em></div><div class="card"><small>D+1 DAU</small><strong>${fmt(r1.dau,'dau')}</strong><em>Rank ${metricRankText(g.title,'1day','dau')}</em></div><div class="card"><small>D+30 PUR</small><strong>${fmt(r30.pur,'pur')}</strong><em>Rank ${metricRankText(g.title,'30days','pur')}</em></div><div class="card"><small>Pre-registration</small><strong>${fmt(getPrereg(g.title).total,'dnu')}</strong><em>사전예약 데이터</em></div></div><section class="panel insight-panel"><div><p class="eyebrow">Executive Summary</p><h3>${performanceGrade(score)[1]}</h3><p class="caption">${insightText(g.title)}</p></div></section><div class="grid two"><section class="panel"><div class="panel-head"><h3>Revenue Growth</h3><span class="caption">D+1~D+60</span></div><div class="line-chart">${lineSvg(revSeries,'revenue_krw')}</div></section><section class="panel"><div class="panel-head"><h3>DAU Growth</h3><span class="caption">D+1~D+60</span></div><div class="line-chart">${lineSvg(dauSeries,'dau')}</div></section></div>`;
-  } else if(activeDetailTab==='kpi'){
-    let html=`<section class="panel"><div class="table-wrap"><table><thead><tr><th>Period</th><th>DNU</th><th>DAU</th><th>Revenue</th><th>PU</th><th>PUR</th><th>ARPU</th><th>ARPPU</th></tr></thead><tbody>`;
-    periods.forEach(p=>{ const r=getKpi(g.title,p); html+=`<tr><td>${p}</td><td>${fmt(r.dnu,'dnu')}</td><td>${fmt(r.dau,'dau')}</td><td>${fmt(r.revenue_krw,'revenue_krw')}</td><td>${fmt(r.pu,'pu')}</td><td>${fmt(r.pur,'pur')}</td><td>${fmt(r.arpu,'arpu')}</td><td>${fmt(r.arppu,'arppu')}</td></tr>`; });
-    content.innerHTML=html+`</tbody></table></div></section>`;
-  } else if(activeDetailTab==='insight'){
-    const grade=performanceGrade(score);
-    content.innerHTML=`<div class="grid two"><section class="panel"><p class="eyebrow">Business Memo</p><h3>${grade[0]} Launch</h3><p class="caption memo-text">${insightText(g.title)}</p><div class="memo-box"><b>성공/실패 원인 기록</b><p>런칭 당시 UA 규모, 스토어 피처링, 주요 이벤트, 서버 이슈, 경쟁작 상황 등을 이 영역에 누적합니다.</p></div><div class="memo-box"><b>다음 런칭 참고사항</b><p>동일 지역/동일 장르 게임을 비교할 때 재사용할 수 있는 Lesson Learned를 저장합니다.</p></div></section><section class="panel"><p class="eyebrow">Score Breakdown</p><h3>Launch Score ${score}</h3><div class="score-bars"><div><span>Revenue</span><b>${metricRankText(g.title,'30days','revenue_krw')}</b></div><div><span>Initial DAU</span><b>${metricRankText(g.title,'1day','dau')}</b></div><div><span>Pay Rate</span><b>${metricRankText(g.title,'30days','pur')}</b></div><div><span>ARPPU</span><b>${metricRankText(g.title,'30days','arppu')}</b></div></div></section></div>`;
-  } else {
-    content.innerHTML=`<section class="panel"><h3>Launch Timeline</h3><div class="timeline"><div class="timeline-item"><div class="timeline-date">D-60 ~ D-1</div><div class="timeline-body"><b>Pre-registration / UA Campaign</b><p class="caption">사전예약, 마케팅 집행, 스토어 피처링 정보 저장 영역</p></div></div><div class="timeline-item"><div class="timeline-date">D-Day</div><div class="timeline-body"><b>Official Launch</b><p class="caption">런칭일: ${(g.launch_date||'-').slice(0,10)}</p></div></div><div class="timeline-item"><div class="timeline-date">D+1</div><div class="timeline-body"><b>Initial Response</b><p class="caption">DAU ${fmt(r1.dau,'dau')} / Revenue ${fmt(r1.revenue_krw,'revenue_krw')}</p></div></div><div class="timeline-item"><div class="timeline-date">D+30</div><div class="timeline-body"><b>First Month Benchmark</b><p class="caption">Revenue ${fmt(r30.revenue_krw,'revenue_krw')} / PUR ${fmt(r30.pur,'pur')}</p></div></div></div></section>`;
-  }
-}
-function setDetailTab(tab){ activeDetailTab=tab; renderGameDetail(currentDetailGame); }
-
-function bind(){
-  setupFilters(); renderSummary(); renderQuickGames(); renderBars('rankingBars', rows('30days'), 'revenue_krw', 8); renderCompare(); renderRankTable(); renderPrereg(); renderDashboardCards();
-  document.getElementById('metricSelect').onchange=e=>renderBars('rankingBars', rows('30days'), e.target.value, 8);
-  document.getElementById('compareMetric').onchange=renderCompare;
-  document.getElementById('rankPeriod').onchange=renderRankTable;
-  document.getElementById('rankMetric').onchange=renderRankTable;
-  document.getElementById('librarySearch')?.addEventListener('input', renderLibrary);
-  document.getElementById('libraryRegion')?.addEventListener('change', renderLibrary);
-  document.getElementById('libraryYear')?.addEventListener('change', renderLibrary);
-  document.getElementById('librarySort')?.addEventListener('change', renderLibrary);
-  document.getElementById('searchInput').oninput=e=>{
-    const q=e.target.value.trim().toLowerCase();
-    if(!q) return;
-    const found=D.games.find(g=>g.title.toLowerCase().includes(q));
-    if(found) openGame(found.title);
-  };
-}
-bind();
+function renderBars(id,data,metric){const arr=[...data].filter(r=>r[metric]!=null&&!isNaN(r[metric])).sort((a,b)=>b[metric]-a[metric]).slice(0,8);const max=Math.max(...arr.map(r=>Number(r[metric])),1);$(id).innerHTML=arr.map((r,i)=>`<div class="bar-row"><div class="rank">${i+1}</div><div><div class="bar-title">${r.title.trim()}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(4,r[metric]/max*100)}%"></div></div></div><div class="bar-value">${fmt(r[metric],metric)}</div></div>`).join('')}
+function renderPills(id,items,active,multi){$(id).innerHTML=items.map(t=>`<button class="pill ${active.includes(t.trim())?'active':''}" data-title="${t.trim()}">${t.trim()}</button>`).join('');$(id).querySelectorAll('.pill').forEach(p=>p.onclick=()=>{const t=p.dataset.title;if(multi){selected=selected.includes(t)?selected.filter(x=>x!==t):([...selected,t].slice(0,5));renderDashboard();renderCompare();}else{current=t;renderDetail(t);showView('detail')}})}
+function goCompare(){showView('compare')}
+function gameCard(g){const r=d30(g.title), r1=d1(g.title);return`<div class="game-card" onclick="current='${g.title}';showView('detail')"><h3>${g.title}</h3><div class="meta"><span class="tag">${region(g)}</span><span class="tag">${launchYear(g)}</span><span class="tag">Score ${g.score}</span></div><div class="score">${g.score}<small>/100</small></div><div class="metric-line"><div class="metric"><span>D+30 Revenue</span><b>${money(r.revenue_usd)}</b></div><div class="metric"><span>D+1 DAU</span><b>${num(r1.dau)}</b></div><div class="metric"><span>D+30 PUR</span><b>${pct(r.pur)}</b></div><div class="metric"><span>Retention</span><b>Required</b></div></div></div>`}
+function fillFilters(){const regions=[...new Set(D.games.map(g=>region(g)))].sort();const years=[...new Set(D.games.map(launchYear))].sort().reverse();[['libRegion',regions,'ALL Region'],['libYear',years,'ALL Year']].forEach(([id,arr,label])=>{$(id).innerHTML=`<option value="">${label}</option>`+arr.map(x=>`<option>${x}</option>`).join('')})}
+function renderLibrary(){let q=($('libSearch').value||'').toLowerCase(), rg=$('libRegion').value, yr=$('libYear').value, sort=$('libSort').value;let list=D.games.filter(g=>(!q||g.title.toLowerCase().includes(q))&&(!rg||region(g)===rg)&&(!yr||launchYear(g)===yr));list.sort((a,b)=>{if(sort==='score')return b.score-a.score;if(sort==='dau')return(d1(b.title).dau||0)-(d1(a.title).dau||0);return(d30(b.title)[sort]||0)-(d30(a.title)[sort]||0)});$('libraryGrid').innerHTML=list.map(gameCard).join('')||'<div class="empty">검색 결과가 없습니다.</div>'}
+function renderDetail(title){current=title||current;const g=D.games.find(x=>x.title.trim()===current.trim())||D.games[0];const rs=gameRows(g.title);const r30=d30(g.title), r1=d1(g.title);const channels=['google','apple','mycard','razer','unipin','oneone','ebanx','xsolla'].map(k=>[k,(r30[k+'_usd']||0)]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);$('detailBody').innerHTML=`<div class="detail-hero"><section class="panel detail-title"><p class="eyebrow">Game Detail</p><h2>${g.title}</h2><div class="meta"><span class="tag">${region(g)}</span><span class="tag">Launch ${launchYear(g)}</span><span class="tag">${g.periods.join(' · ')}</span></div><p>이 화면은 KPI 숫자와 함께 런칭 당시 성공 요인, 이슈, Lessons Learned를 남기는 지식 카드입니다.</p></section><section class="panel"><p class="eyebrow">Launch Score</p><div class="score">${g.score}<small>/100</small></div><div class="metric-line"><div class="metric"><span>D+30 Revenue</span><b>${money(r30.revenue_usd)}</b></div><div class="metric"><span>D+1 DAU</span><b>${num(r1.dau)}</b></div><div class="metric"><span>D+30 ARPPU</span><b>${money(r30.arppu_usd)}</b></div><div class="metric"><span>D+30 PUR</span><b>${pct(r30.pur)}</b></div></div></section></div><div class="grid two"><section class="panel"><div class="panel-head"><div><p class="eyebrow">KPI Curve</p><h3>Revenue / DAU / PUR</h3></div></div>${detailTable(rs)}</section><section class="panel"><p class="eyebrow">Retention</p><h3>Data Required</h3><div class="empty">업로드된 1M Retention 시트에 실제 값이 없어 표시할 수 없습니다.<br/>정식 운영 데이터에는 D1 / D3 / D7 / D14 / D30을 표준으로 추가합니다.</div></section></div><div class="grid two"><section class="panel"><p class="eyebrow">Revenue Composition</p><h3>D+30 Channel Mix</h3>${channels.length?channels.map(([k,v])=>`<div class="bar-row"><div></div><div><div class="bar-title">${k.toUpperCase()}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(4,v/Math.max(...channels.map(c=>c[1]))*100)}%"></div></div></div><div>${money(v)}</div></div>`).join(''):'<div class="empty">채널 데이터 없음</div>'}</section><section class="panel"><p class="eyebrow">Lessons Learned</p><h3>사업부 기록 영역</h3><ul><li>Success Factors: 런칭 성공 요인 기록</li><li>Risk / Issue: 서버, 마케팅, 결제 이슈 기록</li><li>Next Launch Memo: 다음 신작에 반영할 내용 기록</li></ul></section></div>`}
+function detailTable(rs){return`<div class="table-wrap"><table><thead><tr><th>Period</th><th>Revenue</th><th>DAU</th><th>PU</th><th>PUR</th><th>ARPU</th><th>ARPPU</th></tr></thead><tbody>${rs.map(r=>`<tr><td>${r.period}</td><td>${money(r.revenue_usd)}</td><td>${num(r.dau)}</td><td>${num(r.pu)}</td><td>${pct(r.pur)}</td><td>${money(r.arpu_usd)}</td><td>${money(r.arppu_usd)}</td></tr>`).join('')}</tbody></table></div>`}
+function renderCompare(){renderPills('comparePick',D.games.map(g=>g.title),selected,true);const m=$('compareMetric').value;const max=Math.max(...selected.flatMap(t=>gameRows(t).map(r=>r[m]||0)),1);$('lineChart').innerHTML=selected.map(t=>`<div class="line-group" title="${t}">${periods.map(p=>{let v=(row(t,p)||{})[m]||0;return`<div class="line-bar" style="height:${Math.max(2,v/max*100)}%"></div>`}).join('')}</div>`).join('');$('compareTable').innerHTML=`<thead><tr><th>Game</th>${periods.map(p=>`<th>${p}</th>`).join('')}</tr></thead><tbody>${selected.map(t=>`<tr><td><b>${t}</b></td>${periods.map(p=>`<td>${fmt((row(t,p)||{})[m],m)}</td>`).join('')}</tr>`).join('')}</tbody>`}
+function renderRanking(){const p=$('rankPeriod').value,m=$('rankMetric').value;const arr=rows(p).filter(r=>r[m]!=null&&!isNaN(r[m])).sort((a,b)=>b[m]-a[m]);$('rankTable').innerHTML=`<thead><tr><th>#</th><th>Game</th><th>Period</th><th>${labels[m]||m}</th><th>DAU</th><th>PUR</th><th>ARPPU</th></tr></thead><tbody>${arr.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.title.trim()}</b></td><td>${r.period}</td><td>${fmt(r[m],m)}</td><td>${num(r.dau)}</td><td>${pct(r.pur)}</td><td>${money(r.arppu_usd)}</td></tr>`).join('')}</tbody>`}
+function renderRetention(){$('retentionTable').innerHTML=`<thead><tr><th>Game</th><th>D1</th><th>D3</th><th>D7</th><th>D14</th><th>D30</th><th>Status</th></tr></thead><tbody>${D.retention.map(r=>`<tr><td><b>${r.title}</b></td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td><span class="warn">Data Required</span></td></tr>`).join('')}</tbody>`}
+['dashMetric','compareMetric','rankPeriod','rankMetric'].forEach(id=>$(id).addEventListener('change',()=>{renderDashboard();renderCompare();renderRanking()}));['libSearch','libRegion','libYear','libSort'].forEach(id=>$(id).addEventListener('input',renderLibrary));$('globalSearch').addEventListener('input',e=>{$('libSearch').value=e.target.value;showView('library')});fillFilters();renderDashboard();

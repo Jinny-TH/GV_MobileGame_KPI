@@ -1,20 +1,23 @@
 {
-  "name": "ggt-launch-kpi-portal-v4",
+  "name": "ggt-launch-kpi-portal-v5",
   "private": true,
-  "version": "4.0.0",
+  "version": "5.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
-    "@supabase/supabase-js": "latest",
     "@vitejs/plugin-react": "latest",
+    "@supabase/supabase-js": "latest",
     "vite": "latest",
+    "typescript": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "lucide-react": "latest"
+    "lucide-react": "latest",
+    "recharts": "latest",
+    "xlsx": "latest"
   },
   "devDependencies": {}
 }

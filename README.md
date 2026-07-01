@@ -1,47 +1,50 @@
-# GGT Launch KPI Portal v4.0
+# GGT Launch KPI Portal v5.0
 
-React + Vite + Supabase 정식 구조입니다.  
-기존 `supabase/config.js` 방식은 제거했고, Vercel Environment Variables를 사용합니다.
+정식 운영을 위한 React + TypeScript + Supabase 기반 구조입니다.
 
-## 1. 설치
+## 핵심 변경
 
-```bash
-npm install
-npm run dev
-```
+- 기존 HTML/CSS/JS 단일 파일 구조 종료
+- React + Vite + TypeScript 프로젝트로 전환
+- Vercel Environment Variables 기반 Supabase 연결
+- `config.js` 방식 완전 제거
+- Supabase DB 연결 성공 시 DB 데이터 표시
+- DB 연결 실패 또는 데이터 없음 시 샘플 데이터 자동 표시
+- 모든 금액 KPI는 USD 기준
 
-## 2. 로컬 환경변수
+## Vercel 환경변수
 
-`.env.example`을 복사해서 `.env.local`을 만듭니다.
-
-```bash
-cp .env.example .env.local
-```
-
-`.env.local` 내용:
+Vercel Project → Settings → Environment Variables에 아래 2개를 등록합니다.
 
 ```env
 VITE_SUPABASE_URL=https://zfuedujahlomkufaeuja.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_여기에_입력
 ```
 
-## 3. Vercel 환경변수
+등록 후 반드시 Redeploy 하세요.
 
-Vercel Project → Settings → Environment Variables에서 아래 2개를 등록하세요.
+## Supabase 초기화
 
-```text
-VITE_SUPABASE_URL
-VITE_SUPABASE_PUBLISHABLE_KEY
+Supabase SQL Editor에서 아래 순서대로 실행합니다.
+
+1. `supabase/schema.sql`
+2. `supabase/seed_from_excel.sql`
+
+## 로컬 실행
+
+```bash
+npm install
+npm run dev
 ```
 
-Secret key는 절대 넣지 않습니다.
+## 배포 방법
 
-## 4. Supabase SQL
+GitHub 저장소의 기존 HTML 파일을 이 프로젝트 파일로 교체한 뒤 push하면 Vercel이 자동 배포합니다.
 
-`supabase/schema.sql` 실행 후 `supabase/seed_from_excel.sql`을 실행하면 초기 데이터가 들어갑니다.
+## 다음 Sprint
 
-## 5. 동작 방식
-
-- 환경변수가 정상이고 DB 데이터가 있으면 Supabase 데이터를 표시합니다.
-- 환경변수가 없거나 DB가 비어 있으면 내장 샘플 데이터로 자동 표시합니다.
-- 모든 금액 KPI는 USD 기준입니다.
+- Game Detail DB 조인 완성
+- Comparison 차트 완성
+- Retention 데이터 입력/관리
+- Admin Excel Upload
+- Login / Role 권한관리

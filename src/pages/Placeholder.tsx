@@ -1,0 +1,1 @@
+export function Placeholder({ title }: { title: string }) { return <section className="panel full"><small>SPRINT ROADMAP</small><h3>{title}</h3><p>v5.0에서는 React + Supabase 운영 구조를 먼저 고정했습니다. 다음 Sprint에서 이 화면을 DB 기반 기능으로 확장합니다.</p><ul className="roadmap"><li>Supabase 조회 연결</li><li>검색 / 필터</li><li>게임 상세 KPI</li><li>Excel Upload</li><li>권한 관리</li></ul></section>; }

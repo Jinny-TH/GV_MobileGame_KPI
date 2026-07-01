@@ -17,11 +17,12 @@
         </div>
       </div>
       <nav>
-        <button class="nav active" data-view="dashboard">Dashboard</button>
-        <button class="nav" data-view="compare">Game Comparison</button>
-        <button class="nav" data-view="ranking">Ranking</button>
-        <button class="nav" data-view="prereg">Pre-registration</button>
-        <button class="nav" data-view="admin">Admin Design</button>
+        <button class="nav active" data-view="dashboard">🏠 Dashboard</button>
+        <button class="nav" data-view="library">🎮 Game Library</button>
+        <button class="nav" data-view="compare">📊 Game Comparison</button>
+        <button class="nav" data-view="ranking">🏆 Ranking</button>
+        <button class="nav" data-view="prereg">🚀 Pre-registration</button>
+        <button class="nav" data-view="admin">⚙️ Admin Design</button>
       </nav>
       <div class="note">
         <b>목적</b>
@@ -41,21 +42,44 @@
       </header>
 
       <section id="dashboard" class="view active">
-        <div class="hero">
+        <div class="hero hero-v2">
           <div>
-            <p class="eyebrow">Executive Overview</p>
-            <h2>런칭 초기 성과를 빠르게 비교하는 포탈</h2>
-            <p>엑셀에 흩어져 있던 런칭 KPI를 게임별·기간별로 표준화하여 비교합니다.</p>
+            <p class="eyebrow">Launch Knowledge Base</p>
+            <h2>과거 런칭 성과를 검색하고, 비교하고, 기억하는 포탈</h2>
+            <p>실시간 운영 현황이 아니라, 서비스했던 게임의 초기 런칭 성과를 같은 기준으로 비교합니다.</p>
           </div>
           <div class="hero-actions">
-            <button class="primary" onclick="switchView('compare')">게임 비교 시작</button>
+            <button class="primary" onclick="switchView('library')">게임 찾기</button>
+            <button class="ghost" onclick="switchView('compare')">비교 시작</button>
           </div>
         </div>
-        <div class="cards" id="summaryCards"></div>
+
+        <section class="panel search-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Smart Search</p>
+              <h3>게임 검색 / 필터</h3>
+            </div>
+            <span class="caption">게임명, 지역, 출시연도 기준</span>
+          </div>
+          <div class="search-grid">
+            <label>Game<input id="filterGame" placeholder="ROX, ROO, ROM..." /></label>
+            <label>Region<select id="filterRegion"><option value="">ALL</option></select></label>
+            <label>Launch Year<select id="filterYear"><option value="">ALL</option></select></label>
+            <label>Metric<select id="filterMetric"><option value="revenue_krw">Revenue</option><option value="dau">DAU</option><option value="pur">PUR</option><option value="arppu">ARPPU</option></select></label>
+            <button class="primary" onclick="applyDashboardFilter()">Search</button>
+          </div>
+        </section>
+
+        <div class="cards cards-v2" id="summaryCards"></div>
+
         <div class="grid two">
           <section class="panel">
             <div class="panel-head">
-              <h3>D+30 Revenue Ranking</h3>
+              <div>
+                <p class="eyebrow">D+30 Benchmark</p>
+                <h3>D+30 Ranking</h3>
+              </div>
               <select id="metricSelect">
                 <option value="revenue_krw">Revenue</option>
                 <option value="dau">DAU</option>
@@ -65,17 +89,46 @@
                 <option value="arppu">ARPPU</option>
               </select>
             </div>
-            <div id="rankingBars" class="bars"></div>
+            <div id="rankingBars" class="bars bars-ranked"></div>
           </section>
           <section class="panel">
             <div class="panel-head">
-              <h3>Quick Compare</h3>
+              <div>
+                <p class="eyebrow">Quick Compare</p>
+                <h3>바로 비교하기</h3>
+              </div>
               <span class="caption">최대 5개 선택</span>
             </div>
             <div id="quickGameList" class="game-list"></div>
             <button class="primary full" onclick="goCompareSelected()">Compare</button>
           </section>
         </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Filtered Result</p>
+              <h3>검색 결과</h3>
+            </div>
+            <span class="caption" id="filterCount">전체 게임</span>
+          </div>
+          <div id="dashboardGameCards" class="game-card-grid compact"></div>
+        </section>
+      </section>
+
+      <section id="library" class="view">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Game Library</p>
+            <h2>게임 라이브러리</h2>
+          </div>
+          <div class="filters"><input id="librarySearch" placeholder="게임 검색" /></div>
+        </div>
+        <div id="gameLibrary" class="game-card-grid"></div>
+      </section>
+
+      <section id="detail" class="view">
+        <div id="gameDetail"></div>
       </section>
 
       <section id="compare" class="view">

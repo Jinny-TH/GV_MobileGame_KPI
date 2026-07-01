@@ -1,21 +1,47 @@
-# GGT Launch KPI Portal v2.0
+# GGT Launch KPI Portal v4.0
 
-정식 버전 방향으로 재구성한 모바일게임 런칭 성과 비교 포탈입니다.
+React + Vite + Supabase 정식 구조입니다.  
+기존 `supabase/config.js` 방식은 제거했고, Vercel Environment Variables를 사용합니다.
 
-## v2.0 반영 내용
-- 모든 금액 KPI 표시 기준을 USD로 통일
-- Dashboard / Game Library / Game Detail / Comparison / Ranking / Retention / Admin 구조 재설계
-- Retention을 핵심 메뉴로 승격
-- Game Detail에 Lessons Learned 영역 추가
-- GGT 사업부 내부 제품 느낌으로 UI 개선
+## 1. 설치
 
-## 데이터 기준
-- Revenue / ARPU / ARPPU / UA Cost / CPI: USD
-- DAU / DNU / PU: Count
-- PUR / Retention: %
-- Period: 1day, 10days, 15days, 30days, 60days
+```bash
+npm install
+npm run dev
+```
 
-## 중요 메모
-현재 원본 파일의 `1M Retention` 시트에는 D1/D3/D7/D14 헤더는 있으나 실제 값이 비어 있습니다. 정식 운영 전 리텐션 데이터를 추가 매핑해야 합니다.
+## 2. 로컬 환경변수
 
-현재 v2.0 프로토타입은 `ALL KPI 비교` 시트의 KRW 매출을 1 USD = 1,300 KRW 임시 기준으로 정규화했습니다. 다음 Sprint에서는 개별 게임 시트의 원천 USD 컬럼을 우선 매핑하는 방식으로 보강하는 것을 권장합니다.
+`.env.example`을 복사해서 `.env.local`을 만듭니다.
+
+```bash
+cp .env.example .env.local
+```
+
+`.env.local` 내용:
+
+```env
+VITE_SUPABASE_URL=https://zfuedujahlomkufaeuja.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_여기에_입력
+```
+
+## 3. Vercel 환경변수
+
+Vercel Project → Settings → Environment Variables에서 아래 2개를 등록하세요.
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_PUBLISHABLE_KEY
+```
+
+Secret key는 절대 넣지 않습니다.
+
+## 4. Supabase SQL
+
+`supabase/schema.sql` 실행 후 `supabase/seed_from_excel.sql`을 실행하면 초기 데이터가 들어갑니다.
+
+## 5. 동작 방식
+
+- 환경변수가 정상이고 DB 데이터가 있으면 Supabase 데이터를 표시합니다.
+- 환경변수가 없거나 DB가 비어 있으면 내장 샘플 데이터로 자동 표시합니다.
+- 모든 금액 KPI는 USD 기준입니다.

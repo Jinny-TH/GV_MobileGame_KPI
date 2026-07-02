@@ -14,7 +14,7 @@ const items = [
 
 export function Sidebar({ active, setActive }: Props) {
   return <aside className="sidebar">
-    <div className="brand"><div className="logo">G</div><div><strong>GGT Launch KPI</strong><span>Product v5.1</span></div></div>
+    <div className="brand"><div className="logo">G</div><div><strong>GGT Launch KPI</strong><span>Product v6.0</span></div></div>
     <nav>{items.map(([label, Icon]) => <button key={label} onClick={() => setActive(label)} className={active === label ? 'active' : ''}><Icon size={16}/>{label}</button>)}</nav>
     <div className="side-note"><b>Currency Standard</b><span>모든 금액 KPI는 USD 기준입니다.</span></div>
   </aside>;

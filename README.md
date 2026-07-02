@@ -1,56 +1,44 @@
-# GGT Launch KPI Portal v5.1
+# GGT Launch KPI Portal v6.0
 
-React + TypeScript + Vite + Supabase 기반의 GGT 모바일게임 런칭 성과 비교 포탈입니다.
+React + TypeScript + Vite + Supabase 기반 정식 개발 구조입니다.
 
-## v5.1 핵심 추가
+## v6.0 핵심 변경
 
-- Admin → Excel Import 기능 추가
-- GGT KPI 엑셀의 `ALL KPI 비교`, `사전예약`, `1M Retention` 시트 자동 분석
-- 분석 결과 미리보기 후 Supabase DB 저장
-- 기존 데이터는 `game code + period` 기준으로 업데이트
-- 모든 금액 KPI는 USD 기준으로 저장/표시
-- 기본 환산 기준: `1 USD = 1,300 KRW`
+- Supabase 연결 로직을 전면 재작성했습니다.
+- Vercel 환경변수 읽기 실패 시 Settings에서 브라우저 연결 설정으로 임시 연결할 수 있습니다.
+- `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_KEY`를 모두 인식합니다.
+- Admin Excel Import 저장 로직이 동적으로 Supabase Client를 생성하도록 수정했습니다.
+- Settings에서 Supabase 연결 테스트를 직접 실행할 수 있습니다.
 
 ## Vercel 환경변수
 
-Vercel Project → Settings → Environment Variables에 아래 2개를 등록합니다.
+아래 2개를 등록합니다.
 
-```env
+```text
 VITE_SUPABASE_URL=https://zfuedujahlomkufaeuja.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_여기에_입력
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-등록 후 반드시 Redeploy 하세요.
+등록 후 반드시 Vercel에서 Redeploy 해야 합니다.
 
-## Supabase 준비
+## Supabase SQL
 
-이미 테이블을 만들었다면, Excel Import 저장을 위해 SQL Editor에서 아래 파일 내용만 한 번 실행하세요.
+처음 1회 실행:
+
+```text
+supabase/schema.sql
+```
+
+Excel Import 저장 권한이 필요할 경우 실행:
 
 ```text
 supabase/import_policies.sql
 ```
 
-처음부터 새로 만드는 경우에는 아래 순서로 실행합니다.
-
-1. `supabase/schema.sql`
-2. Vercel 배포 후 Admin → Excel Import에서 엑셀 업로드
-
-## 사용 방법
-
-1. Vercel 배포 완료
-2. 좌측 메뉴 `Admin` 클릭
-3. KPI Excel 파일 선택
-4. 분석 결과 미리보기 확인
-5. `Supabase DB 저장` 클릭
-6. Dashboard로 돌아가면 Supabase DB 데이터가 표시됩니다.
-
-## 로컬 실행
-
-```bash
-npm install
-npm run dev
-```
-
 ## 배포 방법
 
-GitHub에 파일 업로드/커밋하면 Vercel이 자동으로 배포합니다.
+1. 이 폴더 안의 파일 전체를 GitHub 저장소 루트에 업로드
+2. Commit
+3. Vercel 자동 배포 확인
+4. Settings 메뉴에서 연결 상태 테스트
+5. Admin 메뉴에서 Excel 업로드 후 Supabase DB 저장

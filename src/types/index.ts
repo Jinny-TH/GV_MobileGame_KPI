@@ -36,4 +36,11 @@ export type PortalData = {
   kpis: LaunchKpi[];
   source: 'supabase' | 'sample';
   warning?: string;
+  status?: 'env-missing' | 'db-empty' | 'db-error' | 'ok';
+  diagnostics?: {
+    hasEnv: boolean;
+    gamesCount?: number;
+    kpiCount?: number;
+    message?: string;
+  };
 };

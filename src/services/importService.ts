@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { supabase, hasSupabaseEnv } from '../lib/supabase';
+import { getSupabaseClient, hasSupabaseEnv } from '../lib/supabase';
 import type { Period } from '../types';
 
 export type ImportPreview = {
@@ -244,8 +244,9 @@ export async function previewExcelImport(file: File): Promise<ImportPreview> {
 }
 
 export async function importPreviewToSupabase(preview: ImportPreview): Promise<ImportResult> {
-  if (!hasSupabaseEnv || !supabase) {
-    return { ok: false, message: 'Supabase 환경변수가 없어 DB 저장을 할 수 없습니다.', preview };
+  const supabase = getSupabaseClient();
+  if (!hasSupabaseEnv() || !supabase) {
+    return { ok: false, message: 'Supabase 설정이 없어 DB 저장을 할 수 없습니다. Settings에서 연결 상태를 확인해줘.', preview };
   }
   if (preview.games.length === 0) {
     return { ok: false, message: '저장할 게임 데이터가 없습니다.', preview };
